@@ -124,10 +124,9 @@ def search_and_dump(ID, lkwargs, search_cache):
     
     current_date = datetime.now().isoformat()
     store_date = current_date[:current_date.index('T')].replace('-','')
-       
+      
     search = lk.search_lightcurvefile(ID, cadence=lkwargs['cadence'], 
                                       mission=lkwargs['mission'])
-
     resultDict = {'result': search,
                   'timestamp': store_date}
     
@@ -220,7 +219,7 @@ def perform_search(ID, lkwargs, use_cached=True, download_dir=None,
         os.makedirs(cachepath)
 
     filepath = os.path.join(*[cachepath, f"{ID}_{lkwargs['cadence']}.lksearchresult"])
-    
+
     if os.path.exists(filepath) and use_cached:  
         
         resultDict = pickle.load(open(filepath, "rb"))
@@ -327,14 +326,14 @@ def query_lightkurve(ID, download_dir, use_cached, lkwargs):
     """
     
     ID = format_name(ID)
-    
+
     set_mission(ID, lkwargs)
     
     ID = getMASTidentifier(ID, lkwargs)
+
+    search = perform_search(ID, lkwargs, download_dir = download_dir)
     
-    search = perform_search(ID, lkwargs)
-    
-    fitsFiles = check_lc_cache(search, lkwargs['mission'])
+    fitsFiles = check_lc_cache(search, lkwargs['mission'], download_dir = download_dir)
 
     lc = load_fits(fitsFiles, lkwargs['mission'])
     
