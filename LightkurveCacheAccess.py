@@ -64,13 +64,13 @@ def load_fits(files, mission):
     """
     if mission in ['Kepler', 'K2']:
         lcs = [lk.lightcurvefile.KeplerLightCurveFile(file) for file in files]
-        lccol = lk.collections.LightCurveFileCollection(lcs)
-        lc = lccol.PDCSAP_FLUX.stitch()
+        lcCol = lk.LightCurveCollection(lcs)
+        #lc = lccol.PDCSAP_FLUX.stitch()
     elif mission in ['TESS']:
         lcs = [lk.lightcurvefile.TessLightCurveFile(file) for file in files]
-        lccol = lk.collections.LightCurveFileCollection(lcs)
-        lc = lccol.PDCSAP_FLUX.stitch()
-    return lc
+        lcCol = lk.LightCurveCollection(lcs)
+        #lc = lccol.PDCSAP_FLUX.stitch()
+    return lcCol
 
 def set_mission(ID, lkwargs):
     """ Set mission keyword in lkwargs.
@@ -101,8 +101,8 @@ def set_mission(ID, lkwargs):
 def search_and_dump(ID, lkwargs, search_cache):
     """ Get lightkurve search result online.
     
-    Uses the lightkurve search_lightcurvefile to find the list of available
-    data for a target ID. 
+    Uses the lightkurve search_lightcurve to find the list of available data 
+    for a target ID. 
     
     Stores the result in the ~/.lightkurve-cache/searchResult directory as a 
     dictionary with the search result object and a timestamp.
@@ -125,12 +125,12 @@ def search_and_dump(ID, lkwargs, search_cache):
     current_date = datetime.now().isoformat()
     store_date = current_date[:current_date.index('T')].replace('-','')
       
-    search = lk.search_lightcurvefile(ID, cadence=lkwargs['cadence'], 
-                                      mission=lkwargs['mission'])
+    search = lk.search_lightcurve(ID, exptime=lkwargs['exptime'], 
+                                  mission=lkwargs['mission'])
     resultDict = {'result': search,
                   'timestamp': store_date}
     
-    fname = os.path.join(*[search_cache, f"{ID}_{lkwargs['cadence']}.lksearchresult"])
+    fname = os.path.join(*[search_cache, f"{ID}_{lkwargs['exptime']}.lksearchresult"])
     
     pickle.dump(resultDict, open(fname, "wb"))
     
@@ -149,7 +149,7 @@ def getMASTidentifier(ID, lkwargs):
         Target ID
     lkwargs : dict
         Dictionary with arguments to be passed to lightkurve. In this case
-        mission and cadence.
+        mission and exptime.
     
     Returns
     -------
@@ -159,7 +159,7 @@ def getMASTidentifier(ID, lkwargs):
     
     if not any([x in ID for x in ['KIC', 'TIC', 'EPIC']]):
         
-        search = lk.search_lightcurvefile(ID, cadence=lkwargs['cadence'], mission=lkwargs['mission'])
+        search = lk.search_lightcurvefile(ID, exptime=lkwargs['exptime'], mission=lkwargs['mission'])
 
         if len(search) == 0:
             raise ValueError(f'No results for {ID} found on MAST')
@@ -181,7 +181,7 @@ def getMASTidentifier(ID, lkwargs):
     return ID
 
 def perform_search(ID, lkwargs, use_cached=True, download_dir=None, 
-                    cache_expire=30):
+                   cache_expire=30):
     """ Find filenames related to target
     
     Preferentially accesses cached search results, otherwise searches the 
@@ -193,7 +193,7 @@ def perform_search(ID, lkwargs, use_cached=True, download_dir=None,
         Target ID (must be KIC, TIC, or ktwo prefixed)
     lkwargs : dict
         Dictionary with arguments to be passed to lightkurve. In this case
-        mission and cadence.
+        mission and exptime.
     use_cached : bool, optional
         Whether or not to use the cached time series. Default is True.
     download_dir : str, optional.
@@ -218,7 +218,7 @@ def perform_search(ID, lkwargs, use_cached=True, download_dir=None,
     if not os.path.isdir(cachepath):
         os.makedirs(cachepath)
 
-    filepath = os.path.join(*[cachepath, f"{ID}_{lkwargs['cadence']}.lksearchresult"])
+    filepath = os.path.join(*[cachepath, f"{ID}_{lkwargs['exptime']}.lksearchresult"])
 
     if os.path.exists(filepath) and use_cached:  
         
@@ -298,7 +298,7 @@ def clean_lc(lc):
     lc = lc.remove_nans().flatten(window_length=4001).remove_outliers()
     return lc
 
-def query_lightkurve(ID, download_dir, use_cached, lkwargs):
+def query_lightkurve(ID, download_dir, lkwargs):
     """ Get time series using LightKurve
     
     Performs a search for available fits files on MAST and then downloads them
@@ -314,8 +314,6 @@ def query_lightkurve(ID, download_dir, use_cached, lkwargs):
         ID string of the target
     download_dir : str
         Directory for fits file and search results caches. 
-    use_cached : bool, optional
-        Whether or not to use the cached time series. Default is True.
     lkwargs : dict
         Dictionary to be passed to LightKurve  
     
@@ -331,12 +329,12 @@ def query_lightkurve(ID, download_dir, use_cached, lkwargs):
     
     ID = getMASTidentifier(ID, lkwargs)
 
-    search = perform_search(ID, lkwargs, download_dir = download_dir)
+    search = perform_search(ID, lkwargs, download_dir=download_dir)
     
-    fitsFiles = check_lc_cache(search, lkwargs['mission'], download_dir = download_dir)
+    fitsFiles = check_lc_cache(search, lkwargs['mission'], download_dir=download_dir)
 
-    lc = load_fits(fitsFiles, lkwargs['mission'])
+    lcCol = load_fits(fitsFiles, lkwargs['mission'])
     
-    lc = clean_lc(lc)
+    #lc = clean_lc(lc)
     
-    return lc
+    return lcCol

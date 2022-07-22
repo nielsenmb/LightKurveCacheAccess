@@ -6,8 +6,6 @@ import LightkurveCacheAccess as lkAcc
 
 mycache = '/home/nielsemb/.lightkurve-cache'
 
-use_cached = True
+lk_kwargs = {'mission': 'Kepler', 'exptime': 1800, 'author': 'Kepler'}
 
-lk_kwargs = {'mission': 'Kepler', 'cadence': 'short'}
-                                                                                    
-lc = lkAcc.query_lightkurve('KIC7199397', mycachce, use_cached, lk_kwargs)
+lcCol = lkAcc.query_lightkurve('KIC7199397', mycache, lk_kwargs)
