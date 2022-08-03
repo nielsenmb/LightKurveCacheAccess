@@ -124,7 +124,8 @@ def search_and_dump(ID, lkwargs, search_cache):
     
     current_date = datetime.now().isoformat()
     store_date = current_date[:current_date.index('T')].replace('-','')
-      
+
+    print('Running new lightkurve search')
     search = lk.search_lightcurve(ID, exptime=lkwargs['exptime'], 
                                   mission=lkwargs['mission'])
     resultDict = {'result': search,
@@ -298,7 +299,7 @@ def clean_lc(lc):
     lc = lc.remove_nans().flatten(window_length=4001).remove_outliers()
     return lc
 
-def query_lightkurve(ID, download_dir, lkwargs):
+def query_lightkurve(ID, lkwargs, use_cached, download_dir, cache_expire=30):
     """ Get time series using LightKurve
     
     Performs a search for available fits files on MAST and then downloads them
@@ -319,8 +320,9 @@ def query_lightkurve(ID, download_dir, lkwargs):
     
     Returns
     -------
-    lc : Lightkurve.LightCurve instance
-        The concatenated time series for the target.
+    lcCol : Lightkurve.LightCurveCollection instance
+        Contains a list of all the sectors/quarters of data either freshly 
+        downloaded or from the cache.
     """
     
     ID = format_name(ID)
@@ -329,12 +331,10 @@ def query_lightkurve(ID, download_dir, lkwargs):
     
     ID = getMASTidentifier(ID, lkwargs)
 
-    search = perform_search(ID, lkwargs, download_dir=download_dir)
+    search = perform_search(ID, lkwargs, use_cached, download_dir=download_dir, cache_expire=cache_expire)
     
     fitsFiles = check_lc_cache(search, lkwargs['mission'], download_dir=download_dir)
 
     lcCol = load_fits(fitsFiles, lkwargs['mission'])
-    
-    #lc = clean_lc(lc)
     
     return lcCol
