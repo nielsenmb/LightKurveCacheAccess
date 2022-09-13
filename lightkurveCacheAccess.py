@@ -65,11 +65,9 @@ def load_fits(files, mission):
     if mission in ['Kepler', 'K2']:
         lcs = [lk.lightcurvefile.KeplerLightCurveFile(file) for file in files]
         lcCol = lk.LightCurveCollection(lcs)
-        #lc = lccol.PDCSAP_FLUX.stitch()
     elif mission in ['TESS']:
-        lcs = [lk.lightcurvefile.TessLightCurveFile(file) for file in files]
+        lcs = [lk.lightcurvefile.TessLightCurveFile(file) for file in files if os.path.basename(file).startswith('tess')]
         lcCol = lk.LightCurveCollection(lcs)
-        #lc = lccol.PDCSAP_FLUX.stitch()
     return lcCol
 
 def set_mission(ID, lkwargs):
@@ -125,8 +123,11 @@ def search_and_dump(ID, lkwargs, search_cache):
     current_date = datetime.now().isoformat()
     store_date = current_date[:current_date.index('T')].replace('-','')
 
-    search = lk.search_lightcurve(ID, exptime=lkwargs['exptime'], 
-                                  mission=lkwargs['mission'])
+    search = lk.search_lightcurve(ID, 
+                                  exptime=lkwargs['exptime'], 
+                                  mission=lkwargs['mission'], 
+                                  author=lkwargs['author'])
+     
     resultDict = {'result': search,
                   'timestamp': store_date}
     
@@ -159,7 +160,9 @@ def getMASTidentifier(ID, lkwargs):
     
     if not any([x in ID for x in ['KIC', 'TIC', 'EPIC']]):
         
-        search = lk.search_lightcurvefile(ID, exptime=lkwargs['exptime'], mission=lkwargs['mission'])
+        search = lk.search_lightcurvefile(ID, exptime=lkwargs['exptime'], 
+                                          mission=lkwargs['mission'], 
+                                          author=lkwargs['author'])
 
         if len(search) == 0:
             raise ValueError(f'No results for {ID} found on MAST')
@@ -223,7 +226,9 @@ def check_sr_cache(ID, lkwargs, use_cached=True, download_dir=None,
     if os.path.exists(filepath) and use_cached:  
         
         resultDict = pickle.load(open(filepath, "rb"))
+
         fdate = resultDict['timestamp'] 
+
         ddate = datetime.now() - datetime(int(fdate[:4]), int(fdate[4:6]), int(fdate[6:]))
         
         # If file is saved more than cache_expire days ago, a new search is performed
@@ -278,7 +283,8 @@ def check_fits_cache(search, mission, download_dir=None):
         if len(files_in_cache) == 0:
             print('No files in cache, downloading.')
         elif len(files_in_cache) > 0:
-            print('Search result did not match cached fits files, downloading.')       
+            print('Search result did not match cached fits files, downloading.')  
+              
         search.download_all(download_dir = download_dir)
         files_in_cache = [os.path.join(*[download_dir, 'mastDownload', mission, row['obs_id'], row['productFilename']]) for row in search.table]
     else:
@@ -338,11 +344,11 @@ def search_lightcurve(ID, download_dir, lkwargs, use_cached, cache_expire=30):
     set_mission(ID, lkwargs)
     
     ID = getMASTidentifier(ID, lkwargs)
-
+     
     search = check_sr_cache(ID, lkwargs, use_cached, download_dir=download_dir, cache_expire=cache_expire)
-    
+     
     fitsFiles = check_fits_cache(search, lkwargs['mission'], download_dir=download_dir)
 
     lcCol = load_fits(fitsFiles, lkwargs['mission'])
-    
+
     return lcCol
